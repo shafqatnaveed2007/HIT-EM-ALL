@@ -63,3 +63,33 @@ Pop normal balloons for standard points.
 Hit GOLD balloons to earn bonus arrows (+2) and extra points.
 Avoid DANGER balloons — hitting them triggers an instant game over!
 Clear POP balloons before they escape, or you will lose arrows!
+
+## Playing in the Browser (GitHub Pages)
+
+The game also builds to WebAssembly and is automatically deployed to GitHub Pages on every push to `main` via [.github/workflows/deploy.yml](.github/workflows/deploy.yml). The page scales responsively to any window size while preserving the game's native 2:1 aspect ratio (letterboxing the rest).
+
+To build the web version locally, install the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) (version `5.0.3`, matching raylib's own release builds) and run:
+
+```sh
+emcc main.c -o dist/index.html \
+  -Os -Wall \
+  -I raylib/raylib-6.0_webassembly/include \
+  raylib/raylib-6.0_webassembly/lib/libraylib.web.a \
+  -L raylib/raylib-6.0_webassembly/lib \
+  -sUSE_GLFW=3 \
+  -sASYNCIFY \
+  -sALLOW_MEMORY_GROWTH=1 \
+  -sTOTAL_MEMORY=134217728 \
+  -sSTACK_SIZE=1048576 \
+  -sFORCE_FILESYSTEM=1 \
+  -sEXPORTED_RUNTIME_METHODS=ccall \
+  -sMINIFY_HTML=0 \
+  -DPLATFORM_WEB \
+  --shell-file web/shell.html \
+  --preload-file assets \
+  --preload-file leaderboard.txt
+```
+
+Then serve the `dist/` folder with any static file server (e.g. `python3 -m http.server --directory dist`) and open it in a browser.
+
+Note: the leaderboard is preloaded from `leaderboard.txt` but score updates made during a browser session are not persisted back to disk or between sessions — the web build uses an in-memory virtual filesystem.

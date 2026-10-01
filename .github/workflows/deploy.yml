@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 5.0.3
+
+      - name: Build web build
+        run: |
+          mkdir -p dist
+          emcc main.c -o dist/index.html \
+            -Os -Wall \
+            -I raylib/raylib-6.0_webassembly/include \
+            raylib/raylib-6.0_webassembly/lib/libraylib.web.a \
+            -L raylib/raylib-6.0_webassembly/lib \
+            -sUSE_GLFW=3 \
+            -sASYNCIFY \
+            -sALLOW_MEMORY_GROWTH=1 \
+            -sTOTAL_MEMORY=134217728 \
+            -sSTACK_SIZE=1048576 \
+            -sFORCE_FILESYSTEM=1 \
+            -sEXPORTED_RUNTIME_METHODS=ccall \
+            -sMINIFY_HTML=0 \
+            -DPLATFORM_WEB \
+            --shell-file web/shell.html \
+            --preload-file assets \
+            --preload-file leaderboard.txt
+          touch dist/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
